@@ -314,20 +314,28 @@ pipeline{
                 git branch: 'main', url: 'https://github.com/gajenderyadavv/Netflix-DevSecOps.git'
             }
         }
-        stage("Sonarqube Analysis "){
-            steps{
+        stage('SonarQube Analysis') {
+            steps {
                 withSonarQubeEnv('sonar-server') {
-                    sh ''' $SCANNER_HOME/bin/sonar-scanner -Dsonar.projectName=Netflix \
-                    -Dsonar.projectKey=Netflix '''
+                    sh '''
+                        $SCANNER_HOME/bin/sonar-scanner \
+                        -Dsonar.projectName=Netflix \
+                        -Dsonar.projectKey=Netflix \
+                        -Dsonar.sources=. \
+                        -Dsonar.host.url=http://3.108.155.212:9000 \
+                        -Dsonar.login=Sonar-token
+                    '''
                 }
             }
         }
-        stage("quality gate"){
-           steps {
+        stage('Quality Gate') {
+            steps {
                 script {
-                    waitForQualityGate abortPipeline: false, credentialsId: 'Sonar-token' 
+                    catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
+                        waitForQualityGate()
+                    }
                 }
-            } 
+            }
         }
         stage('Install Dependencies') {
             steps {
@@ -379,7 +387,7 @@ sudo systemctl restart jenkins
 
 ```
 
-**Phase 4: Monitoring**
+**Phase 4: Monitoring (New Instance / Edit Inbound SG Rules )**
 
 1. **Install Prometheus and Grafana:**
 
@@ -542,7 +550,7 @@ sudo systemctl restart jenkins
 
    **Prometheus Configuration:**
 
-   To configure Prometheus to scrape metrics from Node Exporter and Jenkins, you need to modify the `prometheus.yml` file. Here is an example `prometheus.yml` configuration for your setup:
+   To configure Prometheus to scrape metrics from Node Exporter and Jenkins, you need to modify the `prometheus.yml` file at pwd=/etc/prometheus. Here is an example `prometheus.yml` configuration for your setup:
 
    ```yaml
    global:
